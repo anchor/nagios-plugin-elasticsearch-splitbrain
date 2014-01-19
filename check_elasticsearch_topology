@@ -1,0 +1,53 @@
+#!/usr/bin/python
+
+"""Info-only check that outputs the local node's impression of the cluster's
+topology. Called by check_elasticsearch_splitbrain."""
+
+from nagioscheck import NagiosCheck, UsageError
+from nagioscheck import PerformanceMetric, Status
+from esadmin import Connection
+
+class ElasticSearchTopologyCheck(NagiosCheck):
+    version = '0.1.0'
+
+    def __init__(self):
+        NagiosCheck.__init__(self)
+
+        self.add_option('H', 'host', 'host', "Hostname or network "
+                        "address to probe.  The ElasticSearch API "
+                        "should be listening here.  Defaults to "
+                        "'localhost'.")
+
+        self.add_option('p', 'port', 'port', "TCP port to probe.  "
+                        "The ElasticSearch API should be listening "
+                        "here.  Defaults to 9200.")
+
+    def check(self, opts, args):
+        host = opts.host or "localhost"
+        port = int(opts.port or '9200')
+
+        master = None
+        cluster_state = None
+
+        with Connection(host, port) as conn:
+            master = conn.master()
+            cluster_state = conn.get('/_cluster/state')
+            
+        nodes = cluster_state['nodes']
+        # we just want to compare with our master, so we only need
+        # node names
+        node_names = map(lambda node: node['name'], nodes.values())
+        node_names.sort()
+        topology = "\n".join(
+            map(lambda node: "%s %s" % (
+                "m" if master == node else ".",
+                node), 
+            node_names))
+        
+        raise Status("OK", (topology,))
+        
+
+if __name__ == '__main__':
+    ElasticSearchTopologyCheck().run()
+
+# vim: ts=8 et
