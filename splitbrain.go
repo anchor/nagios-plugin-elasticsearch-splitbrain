@@ -8,7 +8,7 @@
 package main
 
 import (
-	"github.com/laziac/go-nagios/nagios"
+	"github.com/fractalcat/nagiosplugin"
 	"os/exec"
 	"flag"
 	"strings"
@@ -31,7 +31,7 @@ func getTopology(node string, c chan string)  {
 	)
 	topology, err := cmd.CombinedOutput()
 	if err != nil {
-		nagios.Exit(nagios.Status(nagios.UNKNOWN), fmt.Sprintf("Could not get topology for %v: %v", node, err))
+		nagiosplugin.Exit(nagiosplugin.UNKNOWN, fmt.Sprintf("Could not get topology for %v: %v", node, err))
 	}
 	c <- string(topology)
 }
@@ -55,13 +55,13 @@ func getMaster(topology string, nodes []string) string {
 			continue
 		}
 		if match, _ := regexp.Match(`[\.m]\s+[a-zA-Z0-9\.\-_]+`, nameBytes); !match {
-		nagios.Exit(nagios.Status(nagios.UNKNOWN), fmt.Sprintf("Could not parse node name:", name))
+		nagiosplugin.Exit(nagiosplugin.UNKNOWN, fmt.Sprintf("Could not parse node name:", name))
 		}
 		if nameBytes[0] == []byte("m")[0] {
 			return name
 		}
 	}
-	nagios.Exit(nagios.Status(nagios.UNKNOWN), fmt.Sprintf("Could not locate a master"))
+	nagiosplugin.Exit(nagiosplugin.UNKNOWN, fmt.Sprintf("Could not locate a master"))
 	return ""
 }
 
@@ -73,7 +73,7 @@ func main() {
 		flag.PrintDefaults()
 	}
 	if len(nodes) == 0 || len(*nodeList) == 0 {
-		nagios.Exit(nagios.Status(nagios.UNKNOWN), fmt.Sprintf("No nodes specified"))
+		nagiosplugin.Exit(nagiosplugin.UNKNOWN, fmt.Sprintf("No nodes specified"))
 	}
 	nNodes := len(nodes)
 	topologies := make([]string, nNodes)
@@ -85,7 +85,7 @@ func main() {
 	for i, _ := range nodes {
 		topologies[i] = <-c
 	}
-	masterList := make(string, 0)
+	masterList := make([]string, 0)
 	for _, topology := range topologies {
 		topologyMaster := getMaster(topology, nodes)
 		// If we haven't seen this master before, add it to the list of 
@@ -95,15 +95,15 @@ func main() {
 		}
 		masters[topologyMaster] = true
 	}
-	masterText := strings.join(masterList, ", ")
+	masterText := strings.Join(masterList, ", ")
 	infoText := fmt.Sprintf("%d masters (%s)", len(masters), masterText)
-	exitStatus := nagios.Status(nagios.UNKNOWN)
+	exitStatus := nagiosplugin.UNKNOWN
 	if len(masters) > 1 {
-		exitStatus = nagios.Status(nagios.CRITICAL)
+		exitStatus = nagiosplugin.CRITICAL
 	}
 	if len(masters) == 1 {
-		exitStatus = nagios.Status(nagios.OK)
+		exitStatus = nagiosplugin.OK
 	}
-	nagios.Exit(exitStatus, infoText)
+	nagiosplugin.Exit(exitStatus, infoText)
 }
 
