@@ -1,24 +1,24 @@
-/* 
- * check_elasticsearch_splitbrain
- *
- * Nagios check for splitbrain in an Elasticsearch cluster. Takes one
- * mandatory option, -nodes, followed by a comma-separated node list.
+/*
+check_elasticsearch_splitbrain
+
+Nagios check for splitbrain in an Elasticsearch cluster. Takes one
+mandatory option, -nodes, followed by a comma-separated node list.
 */
 
 package main
 
 import (
+	"flag"
+	"fmt"
 	"github.com/fractalcat/nagiosplugin"
 	"os/exec"
-	"flag"
-	"strings"
-	"fmt"
 	"regexp"
+	"strings"
 )
 
-// Given a node's FQDN, grab its topology (via nrpe) and write it to 
-// a channel. 
-func getTopology(node string, c chan string)  {
+// Given a node's FQDN, grab its topology (via nrpe) and write it to
+// a channel.
+func getTopology(node string, c chan string) {
 	cmd := exec.Command(
 		"/usr/lib64/nagios/plugins/check_nrpe",
 		"-H",
@@ -37,7 +37,7 @@ func getTopology(node string, c chan string)  {
 }
 
 // Given a topology and a list of nodes intended to be in the cluster
-// (for sanity-checking), returns the FQDN of the master of the 
+// (for sanity-checking), returns the FQDN of the master of the
 // topology.
 func getMaster(topology string, nodes []string) string {
 	nodeMap := make(map[string]bool)
@@ -55,7 +55,7 @@ func getMaster(topology string, nodes []string) string {
 			continue
 		}
 		if match, _ := regexp.Match(`[\.m]\s+[a-zA-Z0-9\.\-_]+`, nameBytes); !match {
-		nagiosplugin.Exit(nagiosplugin.UNKNOWN, fmt.Sprintf("Could not parse node name:", name))
+			nagiosplugin.Exit(nagiosplugin.UNKNOWN, fmt.Sprintf("Could not parse node name:", name))
 		}
 		if nameBytes[0] == []byte("m")[0] {
 			return name
@@ -88,8 +88,8 @@ func main() {
 	masterList := make([]string, 0)
 	for _, topology := range topologies {
 		topologyMaster := getMaster(topology, nodes)
-		// If we haven't seen this master before, add it to the list of 
-		// masters to print. 
+		// If we haven't seen this master before, add it to the list of
+		// masters to print.
 		if _, ok := masters[topologyMaster]; !ok {
 			masterList = append(masterList, topologyMaster)
 		}
@@ -106,4 +106,3 @@ func main() {
 	}
 	nagiosplugin.Exit(exitStatus, infoText)
 }
-
