@@ -1,5 +1,5 @@
-check_elasticsearch_splitbrain
-==============================
+nagios-plugin-elasticsearch-splitbrain
+======================================
 
 Nagios plugin to check for splitbrains in Elasticsearch clusters. 
 
